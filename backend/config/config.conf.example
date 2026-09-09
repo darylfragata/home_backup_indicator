@@ -1,0 +1,40 @@
+# home-backup-indicator config
+#
+# Copy this file to $XDG_CONFIG_HOME/home-backup-indicator/config.conf
+# (usually ~/.config/home-backup-indicator/config.conf) and edit as needed.
+# It's sourced by home-backup.sh as plain bash, so anything defined here
+# overrides the script's built-in defaults.
+
+# Name of the rclone remote created via `rclone config` (rclone listremotes
+# will show it as "onedrive:" if you named it "onedrive").
+#RCLONE_REMOTE="onedrive"
+
+# Subfolder on the remote under which everything is backed up.
+#REMOTE_BASE="HomeBackup"
+
+# Which local folders to sync, and what subfolder each maps to on the remote.
+# Uncomment and edit to change the folder list.
+#declare -A SYNC_PATHS=(
+#  ["$HOME/.ssh"]="ssh"
+#  ["$HOME/Documents"]="Documents"
+#  ["$HOME/projects"]="projects"
+#)
+
+# Individual dotfiles synced as a set into ${REMOTE_BASE}/dotfiles.
+#DOTFILES=(
+#  "$HOME/.bashrc"
+#  "$HOME/.gitconfig"
+#)
+
+# rclone exclude patterns applied to every entry in SYNC_PATHS (not to DOTFILES).
+#EXCLUDES=(
+#  --exclude "node_modules/**"
+#  --exclude ".venv/**"
+#  --exclude "venv/**"
+#  --exclude "__pycache__/**"
+#  --exclude "*.pyc"
+#  --exclude "dist/**"
+#  --exclude "build/**"
+#  --exclude "target/**"
+#  --exclude ".cache/**"
+#)

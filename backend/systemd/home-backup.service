@@ -1,0 +1,11 @@
+[Unit]
+Description=Home Backup Indicator - rclone sync to OneDrive
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/home-backup-indicator/home-backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

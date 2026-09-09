@@ -1,0 +1,3 @@
+# Local state/logs are user-machine-specific, never committed.
+*.log
+*.swp

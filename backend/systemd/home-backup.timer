@@ -1,0 +1,22 @@
+[Unit]
+Description=Run Home Backup Indicator sync periodically
+
+[Timer]
+# Default cadence: every 30 minutes, plus a short delay after login/boot so it
+# doesn't compete with startup. To change the interval WITHOUT editing this
+# shipped file, run:
+#
+#   systemctl --user edit home-backup.timer
+#
+# and add:
+#
+#   [Timer]
+#   OnUnitActiveSec=2h
+#
+# then: systemctl --user daemon-reload && systemctl --user restart home-backup.timer
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

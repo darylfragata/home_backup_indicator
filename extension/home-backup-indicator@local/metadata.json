@@ -1,0 +1,8 @@
+{
+  "uuid": "home-backup-indicator@local",
+  "name": "Home Backup Indicator",
+  "description": "Shows rclone/OneDrive backup sync status in the top bar: idle/syncing/error, last successful sync time, a Sync Now action, and the last error message on failure. Personal use only; reads status written by the home_backup_indicator backend script, does not perform any syncing itself.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "version": 1,
+  "url": ""
+}
