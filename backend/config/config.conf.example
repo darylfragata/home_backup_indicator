@@ -9,15 +9,29 @@
 # will show it as "onedrive:" if you named it "onedrive").
 #RCLONE_REMOTE="onedrive"
 
-# Subfolder on the remote under which everything is backed up.
+# Subfolder on the remote under which everything is backed up. Defaults to
+# "<OS name>Backup" (e.g. "FedoraBackup"), derived from /etc/os-release, so
+# each machine/distro gets its own folder on the remote.
 #REMOTE_BASE="HomeBackup"
 
-# Which local folders to sync, and what subfolder each maps to on the remote.
-# Uncomment and edit to change the folder list.
-#declare -A SYNC_PATHS=(
+# Every non-hidden top-level folder in $HOME is synced automatically (so a
+# newly created folder is picked up on the next run with no config changes),
+# except the ones listed here. Uncomment and edit to change the skip list.
+#SKIP_TOPLEVEL_DIRS=(Downloads Desktop Music Pictures Videos Public Templates)
+
+# Hidden ($HOME/.foo) folders to sync explicitly — dotfolders are never
+# auto-discovered, since most (.cache, .config, .mozilla, ...) shouldn't be
+# backed up wholesale. Map of local path -> subfolder on the remote.
+#declare -A EXTRA_HIDDEN_PATHS=(
 #  ["$HOME/.ssh"]="ssh"
+#)
+
+# To fully opt out of auto-discovery and go back to an explicit folder list,
+# set this instead (it replaces the auto-discovered set entirely; the
+# EXTRA_HIDDEN_PATHS above are still merged in on top of it):
+#declare -A SYNC_PATHS_OVERRIDE=(
 #  ["$HOME/Documents"]="Documents"
-#  ["$HOME/projects"]="projects"
+#  ["$HOME/Project"]="Project"
 #)
 
 # Individual dotfiles synced as a set into ${REMOTE_BASE}/dotfiles.
@@ -37,4 +51,5 @@
 #  --exclude "build/**"
 #  --exclude "target/**"
 #  --exclude ".cache/**"
+#  --exclude ".terraform/**"
 #)

@@ -29,14 +29,36 @@ fi
 
 # ---- Defaults (override any of these in $CONFIG_FILE) ----
 RCLONE_REMOTE="onedrive"
-REMOTE_BASE="HomeBackup"
 
-# Map of local source path -> subfolder under ${RCLONE_REMOTE}:${REMOTE_BASE}
-declare -A SYNC_PATHS=(
+# Default remote subfolder is "<OS name>Backup" (e.g. "FedoraBackup",
+# "UbuntuBackup"), derived from /etc/os-release so each machine/distro backs
+# up into its own folder. Falls back to "HomeBackup" if that can't be read.
+os_id=""
+if [ -r /etc/os-release ]; then
+  # shellcheck disable=SC1091
+  os_id="$(. /etc/os-release && printf '%s' "${ID:-}")"
+fi
+if [ -n "$os_id" ]; then
+  REMOTE_BASE="$(printf '%s' "$os_id" | cut -c1 | tr '[:lower:]' '[:upper:]')$(printf '%s' "$os_id" | cut -c2-)Backup"
+else
+  REMOTE_BASE="HomeBackup"
+fi
+unset os_id
+
+# Non-hidden top-level $HOME folders are auto-discovered and synced (see
+# "Resolve which folders to sync" below), so a newly created folder is picked
+# up on the next run with no config changes needed. These are skipped.
+SKIP_TOPLEVEL_DIRS=(Downloads Desktop Music Pictures Videos Public Templates)
+
+# Hidden ($HOME/.foo) folders to sync explicitly — dotfolders are never
+# auto-discovered. Map of local path -> subfolder under ${REMOTE_BASE}.
+declare -A EXTRA_HIDDEN_PATHS=(
   ["$HOME/.ssh"]="ssh"
-  ["$HOME/Documents"]="Documents"
-  ["$HOME/projects"]="projects"
 )
+
+# Set this in config.conf to fully replace auto-discovery with an explicit
+# map of local path -> subfolder under ${REMOTE_BASE}.
+declare -A SYNC_PATHS_OVERRIDE=()
 
 # Individual files synced as a set into ${REMOTE_BASE}/dotfiles
 DOTFILES=(
@@ -55,10 +77,36 @@ EXCLUDES=(
   --exclude "build/**"
   --exclude "target/**"
   --exclude ".cache/**"
+  --exclude ".terraform/**"
 )
 
 # shellcheck disable=SC1090
 [ -f "$CONFIG_FILE" ] && source "$CONFIG_FILE"
+
+# ---- Resolve which folders to sync ----
+declare -A SYNC_PATHS=()
+if [ "${#SYNC_PATHS_OVERRIDE[@]}" -gt 0 ]; then
+  for src in "${!SYNC_PATHS_OVERRIDE[@]}"; do
+    SYNC_PATHS["$src"]="${SYNC_PATHS_OVERRIDE[$src]}"
+  done
+else
+  for entry in "$HOME"/*/; do
+    [ -d "$entry" ] || continue
+    name="$(basename "$entry")"
+    skip=0
+    for s in "${SKIP_TOPLEVEL_DIRS[@]}"; do
+      if [ "$name" = "$s" ]; then
+        skip=1
+        break
+      fi
+    done
+    [ "$skip" -eq 1 ] && continue
+    SYNC_PATHS["$HOME/$name"]="$name"
+  done
+fi
+for src in "${!EXTRA_HIDDEN_PATHS[@]}"; do
+  SYNC_PATHS["$src"]="${EXTRA_HIDDEN_PATHS[$src]}"
+done
 
 # ---- Persistent state (survives across runs) ----
 LAST_SUCCESS=""

@@ -49,19 +49,29 @@ extension/
    `onedrive`) is set up via `rclone listremotes`. If either check fails, it
    writes a clear error to the status file and log, and **exits cleanly
    instead of crashing**.
-2. Syncs each folder in `SYNC_PATHS` (default: `~/.ssh`, `~/Documents`,
-   `~/projects`) one-way (local → remote) with `rclone sync`, using a default
-   exclude list (`node_modules`, `.venv`, `__pycache__`, build/dist/target
-   dirs, `.cache`) to keep OneDrive usage sane.
-3. Copies `DOTFILES` (default: `~/.bashrc`, `~/.gitconfig`) into a temp
-   staging dir and syncs that as a set into `HomeBackup/dotfiles` on the
+2. Picks a destination folder on the remote, `${REMOTE_BASE}`, defaulting to
+   `<OS name>Backup` (e.g. `FedoraBackup`, `UbuntuBackup`) derived from
+   `/etc/os-release` — so if you run this on more than one machine against
+   the same OneDrive account, each one backs up into its own folder instead
+   of colliding.
+3. Auto-discovers every non-hidden top-level folder in `$HOME` — skipping
+   `Downloads`, `Desktop`, `Music`, `Pictures`, `Videos`, `Public`, and
+   `Templates` by default — plus `~/.ssh` explicitly, and syncs each one-way
+   (local → remote) with `rclone sync`. A default exclude list
+   (`node_modules`, `.venv`, `__pycache__`, build/dist/target dirs, `.cache`,
+   `.terraform`) keeps large, regeneratable directories out of OneDrive.
+   Because the folder list is rebuilt fresh on every run, a newly created
+   folder under `$HOME` gets backed up automatically — no config changes
+   needed.
+4. Copies `DOTFILES` (default: `~/.bashrc`, `~/.gitconfig`) into a temp
+   staging dir and syncs that as a set into `${REMOTE_BASE}/dotfiles` on the
    remote.
-4. Writes progress/results to two places:
+5. Writes progress/results to two places:
    - `~/.local/state/home-backup-indicator/status.json` — machine-readable
      status for the extension (`state`, `last_success`, `last_error`, etc.)
    - `~/.local/state/home-backup-indicator/backup.log` — human-readable log
      (also fed rclone's own `--log-file` output)
-5. Uses an `flock` lock file so an overrunning sync can't overlap with the
+6. Uses an `flock` lock file so an overrunning sync can't overlap with the
    next timer tick.
 
 All folder paths, the remote name, and excludes are overridable in
