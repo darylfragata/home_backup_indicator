@@ -80,20 +80,48 @@ having in OneDrive's storage/retention model.
 
 ## Setup
 
-### 1. Install and configure rclone (one-time, interactive)
+### 1. Install rclone
 
 ```bash
-sudo dnf install rclone      # Fedora; use your distro's package manager elsewhere
-rclone config                # create a remote named "onedrive", type = onedrive
-                              # follow the browser OAuth flow it opens
-rclone listremotes            # should print "onedrive:"
+sudo dnf install -y rclone     # Fedora; use your distro's package manager elsewhere
+rclone version                 # sanity check — this project was built against v1.74.x
 ```
 
-If you name the remote something other than `onedrive`, set
-`RCLONE_REMOTE="yourname"` in `~/.config/home-backup-indicator/config.conf`
-(copy it from `backend/config/config.conf.example` first).
+### 2. Configure the OneDrive remote (one-time, interactive)
 
-### 2. Install the backend (systemd --user service + timer)
+```bash
+rclone config
+```
+
+Walk through the prompts like this:
+
+| Prompt | Answer |
+|---|---|
+| `n) New remote` | `n` |
+| `name>` | `onedrive` (must match `RCLONE_REMOTE` in the backend, default is `onedrive`) |
+| `Storage>` | search/select **Microsoft OneDrive** (`onedrive`) from the list |
+| `client_id>` / `client_secret>` | leave blank (press Enter) to use rclone's default app |
+| `region>` | `1` (Microsoft Cloud Global) unless you're on a special region |
+| `Edit advanced config?` | `n` |
+| `Use auto config?` | `y` on a desktop with a browser — it opens a browser window for you to sign in and grant access. Answer `n` only if this is a headless machine (it'll give you a link + local server flow instead) |
+| Account/drive type | **OneDrive Personal** (or Business/SharePoint if that's your account) |
+| `Choose a number from below, or type in your own value` (drive selection) | pick your personal drive from the list |
+| `y) Yes this is OK` | `y` |
+| `q) Quit config` | `q` |
+
+Then verify it worked:
+
+```bash
+rclone listremotes              # should print: onedrive:
+rclone about onedrive:          # shows total/used/free space, confirms auth works
+```
+
+If you name the remote something other than `onedrive`, copy
+`backend/config/config.conf.example` to
+`~/.config/home-backup-indicator/config.conf` and set
+`RCLONE_REMOTE="yourname"` there instead of editing the script.
+
+### 3. Install the backend (systemd --user service + timer)
 
 ```bash
 ./backend/install.sh
@@ -135,7 +163,7 @@ cat ~/.local/state/home-backup-indicator/status.json
 tail -f ~/.local/state/home-backup-indicator/backup.log
 ```
 
-### 3. Install the GNOME extension (local testing)
+### 4. Install the GNOME extension (local testing)
 
 Two options:
 
@@ -187,6 +215,27 @@ journalctl --user -f -o cat | grep -i home-backup-indicator
 ```
 
 `logError()` calls in `extension.js` show up there.
+
+## Verifying your setup
+
+Quick end-to-end check after installing both halves:
+
+```bash
+rclone listremotes                                 # onedrive:
+rclone about onedrive:                              # confirms auth still works, shows quota
+systemctl --user is-active home-backup.timer        # active
+systemctl --user list-timers home-backup.timer      # shows next scheduled run
+cat ~/.local/state/home-backup-indicator/status.json # state should be "ok" after a run
+gnome-extensions list --enabled | grep home-backup   # should list home-backup-indicator@local
+```
+
+If `gnome-extensions list --enabled` doesn't show it even after running
+`./extension/install.sh`, GNOME Shell hasn't picked up the new symlink yet —
+this happens if you install it without reloading first. Reload the Shell
+(`Alt+F2 r Enter` on X11, or log out/in on Wayland — GNOME 50 defaults to
+Wayland, so log out/in is the reliable path), then run
+`gnome-extensions enable home-backup-indicator@local` again and check the
+top bar.
 
 ## What the extension shows
 
