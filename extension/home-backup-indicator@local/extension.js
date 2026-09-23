@@ -25,6 +25,21 @@ const STATUS_FILE = GLib.build_filenamev([
   'status.json',
 ]);
 
+const CONFIG_FILE = GLib.build_filenamev([
+  GLib.get_user_config_dir(),
+  'home-backup-indicator',
+  'config.conf',
+]);
+
+// Terminals to try, in order. Each takes the command to run after '--'/'-e'.
+const TERMINALS = [
+  ['ptyxis', '--'],
+  ['gnome-terminal', '--'],
+  ['kgx', '-e'],
+  ['konsole', '-e'],
+  ['xterm', '-e'],
+];
+
 const ICON_FOR_STATE = {
   idle: 'emblem-default-symbolic',
   ok: 'emblem-default-symbolic',
@@ -68,6 +83,10 @@ class BackupIndicator extends PanelMenu.Button {
     this._syncNowItem = new PopupMenu.PopupMenuItem('Sync Now');
     this._syncNowItem.connect('activate', () => this._triggerSync());
     this.menu.addMenuItem(this._syncNowItem);
+
+    this._loginItem = new PopupMenu.PopupMenuItem('Log in / Re-login OneDrive');
+    this._loginItem.connect('activate', () => this._openLogin());
+    this.menu.addMenuItem(this._loginItem);
 
     this._refresh();
     this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_INTERVAL_SECONDS, () => {
@@ -114,6 +133,54 @@ class BackupIndicator extends PanelMenu.Button {
     } else {
       this._errorItem.visible = false;
     }
+  }
+
+  // Same default and override as the backend: RCLONE_REMOTE in config.conf.
+  _remoteName() {
+    try {
+      const [ok, contents] = Gio.File.new_for_path(CONFIG_FILE).load_contents(null);
+      if (ok) {
+        const text = new TextDecoder('utf-8').decode(contents);
+        const m = text.match(/^\s*RCLONE_REMOTE=["']?([^"'\s#]+)/m);
+        if (m)
+          return m[1];
+      }
+    } catch (e) {
+      // No config file: use the default.
+    }
+    return 'onedrive';
+  }
+
+  // The rclone OAuth flow is interactive, so run it in a terminal window.
+  // Uses 'rclone config' to create the remote if it doesn't exist yet,
+  // otherwise 'rclone config reconnect' to refresh its token.
+  _openLogin() {
+    const remote = this._remoteName();
+    const script = [
+      'r="$1"',
+      'if rclone listremotes | grep -qx "$r:"; then',
+      '  rclone config reconnect "$r:"',
+      'else',
+      '  echo "Remote $r is not configured; starting rclone config (name it: $r)"',
+      '  rclone config',
+      'fi',
+      'echo',
+      'read -r -p "Done. Press Enter to close..." _',
+    ].join('\n');
+    const cmd = ['bash', '-c', script, 'onedrive-login', remote];
+
+    for (const [term, sep] of TERMINALS) {
+      if (!GLib.find_program_in_path(term))
+        continue;
+      try {
+        Gio.Subprocess.new([term, sep, ...cmd], Gio.SubprocessFlags.NONE);
+        return;
+      } catch (e) {
+        logError(e, `home-backup-indicator: failed to launch ${term}`);
+      }
+    }
+    Main.notifyError('Home Backup Indicator',
+      'No terminal found. Run "rclone config reconnect ' + remote + ':" manually.');
   }
 
   _triggerSync() {
