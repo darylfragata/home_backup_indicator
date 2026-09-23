@@ -85,6 +85,7 @@ class BackupIndicator extends PanelMenu.Button {
     this.menu.addMenuItem(this._syncNowItem);
 
     this._loginItem = new PopupMenu.PopupMenuItem('Log in / Re-login OneDrive');
+    this._loginItem.visible = false;
     this._loginItem.connect('activate', () => this._openLogin());
     this.menu.addMenuItem(this._loginItem);
 
@@ -119,6 +120,7 @@ class BackupIndicator extends PanelMenu.Button {
       this._statusItem.label.text = 'Status: no data yet (has it run?)';
       this._lastSyncItem.label.text = 'Last sync: never';
       this._errorItem.visible = false;
+      this._loginItem.visible = false;
       return;
     }
 
@@ -126,6 +128,8 @@ class BackupIndicator extends PanelMenu.Button {
     this._icon.icon_name = ICON_FOR_STATE[state] || ICON_FOR_STATE.unknown;
     this._statusItem.label.text = `Status: ${state}`;
     this._lastSyncItem.label.text = `Last sync: ${formatTimestamp(status.last_success)}`;
+
+    this._loginItem.visible = state === 'error';
 
     if (state === 'error' && status.last_error) {
       this._errorItem.label.text = `Error: ${status.last_error}`;

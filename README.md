@@ -253,13 +253,13 @@ top bar.
   sync, refresh icon while syncing, error icon after a failed sync.
 - **Dropdown menu**: current status, last successful sync timestamp, the
   last error message (only shown when the last run failed), a separator,
-  a **Sync Now** item, and a **Log in / Re-login OneDrive** item.
+  a **Sync Now** item, and a **Log in / Re-login OneDrive** item that only appears when the last sync failed.
 - **Sync Now** runs `systemctl --user start home-backup.service` — the
   extension doesn't touch rclone directly, so this is the same code path the
   timer uses. The menu re-reads `status.json` every 5 seconds, so the icon
   and menu update automatically once the backend finishes.
 
-- **Log in / Re-login OneDrive** opens a terminal (Ptyxis, GNOME Terminal,
+- **Log in / Re-login OneDrive** (shown only in the `error` state) opens a terminal (Ptyxis, GNOME Terminal,
   Console, Konsole or xterm, first one found) and runs
   `rclone config reconnect <remote>:` to redo the browser sign-in. If the
   remote isn't configured yet it runs `rclone config` instead. The remote
